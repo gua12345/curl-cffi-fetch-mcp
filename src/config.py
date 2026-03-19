@@ -7,9 +7,13 @@
 """
 
 import json
+from pathlib import Path
 from typing import Dict, Any
-from pydantic import field_validator
+from pydantic import field_validator, Field
 from pydantic_settings import BaseSettings
+
+# 获取项目根目录（src 的父目录）
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class Settings(BaseSettings):
@@ -30,7 +34,7 @@ class Settings(BaseSettings):
 
     # 代理池配置（从 .env 读取 JSON 字符串）
     # 格式：{"标识符": {"url": "代理URL", "description": "描述"}}
-    PROXY_POOL: Dict[str, Dict[str, str]] = {}
+    PROXY_POOL: Dict[str, Dict[str, str]] | None = None
 
     # html2text 配置
     HTML2TEXT_BODY_WIDTH: int = 0  # 0 表示不换行
@@ -41,6 +45,8 @@ class Settings(BaseSettings):
     @classmethod
     def parse_proxy_pool(cls, v: Any) -> Dict[str, Dict[str, str]]:
         """解析 .env 中的 JSON 字符串为 dict"""
+        if v is None:
+            return {}
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -49,7 +55,7 @@ class Settings(BaseSettings):
         return v if isinstance(v, dict) else {}
 
     class Config:
-        env_file = ".env"
+        env_file = str(PROJECT_ROOT / ".env")
         env_file_encoding = "utf-8"
 
 

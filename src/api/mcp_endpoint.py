@@ -25,6 +25,7 @@ async def list_proxies() -> str:
     proxy_pool = settings.PROXY_POOL
 
     if not proxy_pool:
+        print(proxy_pool)
         return "当前没有配置可用代理"
 
     # 格式化代理列表
