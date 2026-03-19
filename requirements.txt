@@ -1,0 +1,24 @@
+# Web 框架
+fastapi==0.135.1
+uvicorn==0.42.0
+
+# MCP 协议
+mcp==1.26.0
+
+# 爬取库
+curl-cffi==0.14.0
+
+# 数据验证和配置
+pydantic==2.12.5
+pydantic-settings==2.13.1
+
+# HTML 转换
+html2text==2025.4.15
+
+# 环境变量
+python-dotenv==1.2.2
+
+# 开发依赖（可选）
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
+# httpx>=0.25.0
