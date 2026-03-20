@@ -491,7 +491,142 @@ curl-cffi-fetch-mcp/
 - URL 格式验证，防止 SSRF 攻击
 - 限制可访问的协议（仅 http/https）
 
-## 生产部署
+## Docker 部署
+
+### 使用 Docker Compose（推荐）
+
+最简单的部署方式，自动配置 Redis 缓存。
+
+#### 1. 配置环境变量
+
+```bash
+cp .env.example .env
+# 编辑 .env 文件，至少设置 API_KEY
+```
+
+#### 2. 启动服务
+
+```bash
+# 启动所有服务（应用 + Redis）
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+
+# 停止并删除数据卷
+docker-compose down -v
+```
+
+#### 3. 访问服务
+
+- API 文档：http://localhost:8000/docs
+- 健康检查：http://localhost:8000/health
+
+### 使用 Docker（仅应用）
+
+如果只需要运行应用容器，不使用 Redis 缓存。
+
+#### 1. 构建镜像
+
+```bash
+docker build -t curl-cffi-fetch-mcp .
+```
+
+#### 2. 运行容器
+
+```bash
+docker run -d \
+  --name curl-cffi-fetch-mcp \
+  -p 8000:8000 \
+  -e API_KEY=your-secret-api-key \
+  -e DEBUG=false \
+  curl-cffi-fetch-mcp
+```
+
+#### 3. 使用环境变量文件
+
+```bash
+docker run -d \
+  --name curl-cffi-fetch-mcp \
+  -p 8000:8000 \
+  --env-file .env \
+  curl-cffi-fetch-mcp
+```
+
+### Docker 配置说明
+
+#### 端口映射
+
+默认映射 `8000:8000`，可通过环境变量 `PORT` 修改：
+
+```bash
+# docker-compose.yml 中修改
+ports:
+  - "9000:8000"  # 宿主机 9000 -> 容器 8000
+```
+
+#### Redis 缓存
+
+Docker Compose 默认启用 Redis 缓存：
+- Redis 数据持久化到 Docker 卷 `redis-data`
+- 容器间通过 `app-network` 网络通信
+- 应用自动连接到 `redis://redis:6379/0`
+
+如不需要 Redis，可以：
+
+```bash
+# 仅启动应用服务
+docker-compose up -d app
+
+# 或修改 docker-compose.yml，移除 depends_on 和 CACHE_REDIS_URL
+```
+
+#### 健康检查
+
+容器内置健康检查，每 30 秒检查一次 `/health` 端点：
+
+```bash
+# 查看容器健康状态
+docker ps
+docker inspect curl-cffi-fetch-mcp | grep -A 10 Health
+```
+
+### 生产环境建议
+
+1. **使用 Redis 缓存**：支持多实例部署和持久化
+2. **配置资源限制**：
+
+```yaml
+# docker-compose.yml 中添加
+services:
+  app:
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+```
+
+3. **使用反向代理**：通过 Nginx/Traefik 提供 HTTPS
+4. **日志管理**：配置日志驱动和轮转
+
+```yaml
+services:
+  app:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+## 传统部署
 
 ### 使用 uvicorn
 

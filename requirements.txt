@@ -20,9 +20,5 @@ python-dotenv==1.2.2
 
 # Token 计数和缓存
 tiktoken==0.8.0
-redis[asyncio]==5.0.0  # 可选，仅当使用 Redis 缓存时需要
+redis[asyncio]==5.0.0
 
-# 开发依赖（可选）
-# pytest>=7.4.0
-# pytest-asyncio>=0.21.0
-# httpx>=0.25.0

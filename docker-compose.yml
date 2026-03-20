@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # 主应用服务
+  app:
+    build: .
+    container_name: curl-cffi-fetch-mcp
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # 服务配置
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=${DEBUG:-false}
+
+      # 鉴权（必填）
+      - API_KEY=${API_KEY:?请在 .env 文件中设置 API_KEY}
+
+      # curl-cffi 配置
+      - DEFAULT_IMPERSONATE=${DEFAULT_IMPERSONATE:-chrome}
+      - DEFAULT_TIMEOUT=${DEFAULT_TIMEOUT:-30}
+      - DEFAULT_PROXY=${DEFAULT_PROXY:-}
+
+      # 代理池配置
+      - PROXY_POOL=${PROXY_POOL:-{}}
+
+      # html2text 配置
+      - HTML2TEXT_BODY_WIDTH=${HTML2TEXT_BODY_WIDTH:-0}
+      - HTML2TEXT_IGNORE_LINKS=${HTML2TEXT_IGNORE_LINKS:-false}
+      - HTML2TEXT_IGNORE_IMAGES=${HTML2TEXT_IGNORE_IMAGES:-false}
+
+      # 缓存配置（使用 Redis）
+      - CACHE_REDIS_URL=${CACHE_REDIS_URL:-redis://redis:6379/0}
+
+      # 缓存行为配置
+      - CACHE_TOKEN_THRESHOLD=${CACHE_TOKEN_THRESHOLD:-2000}
+      - CACHE_DEFAULT_CHUNK_SIZE=${CACHE_DEFAULT_CHUNK_SIZE:-2000}
+
+      # 缓存清理配置
+      - CACHE_DELETE_DELAY_SECONDS=${CACHE_DELETE_DELAY_SECONDS:-300}
+      - CACHE_TTL_SECONDS=${CACHE_TTL_SECONDS:-1800}
+      - CACHE_CLEANUP_INTERVAL=${CACHE_CLEANUP_INTERVAL:-300}
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Redis 缓存服务（可选）
+  redis:
+    image: redis:7-alpine
+    container_name: curl-cffi-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
