@@ -14,7 +14,7 @@ class FetchRequest(BaseModel):
     )
     proxy: Optional[str] = Field(
         default=None,
-        description="代理标识符（如 sg/cn/us）"
+        description="代理配置，支持两种模式：1) 代理标识符（如 hk/sg/us）从代理池查找；2) 完整代理 URL（如 http://proxy:8080, socks5://user:pass@proxy:1080）直接使用"
     )
     headers: Optional[Dict[str, str]] = Field(
         default=None,

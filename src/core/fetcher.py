@@ -12,7 +12,7 @@ async def fetch_url(
     impersonate: str = "chrome",
     headers: Optional[Dict[str, str]] = None,
     cookies: Optional[Dict[str, str]] = None,
-    proxy: Optional[str] = None,  # 代理标识符（如 "sg", "cn"）
+    proxy: Optional[str] = None,  # 代理标识符或完整代理 URL
     timeout: int = 30,
     proxy_pool: Optional[Dict[str, Dict[str, str]]] = None
 ) -> Tuple[str, int, Dict[str, str]]:
@@ -26,7 +26,9 @@ async def fetch_url(
         impersonate: 浏览器类型（chrome/safari/edge）
         headers: 自定义请求头
         cookies: 自定义 Cookies
-        proxy: 代理标识符（如 "sg", "cn"），从代理池中查找对应的代理 URL
+        proxy: 代理标识符（如 "sg", "cn"）或完整代理 URL（如 "http://proxy:8080"）
+               - 如果以 http://, https://, socks5:// 开头，则直接使用该 URL
+               - 否则从代理池中查找对应的代理 URL
         timeout: 超时时间（秒）
         proxy_pool: 代理池配置
 
@@ -36,10 +38,16 @@ async def fetch_url(
     异常：
         Exception: 网络请求失败时抛出异常
     """
-    # 解析代理标识符为实际的代理 URL
+    # 解析代理：支持标识符映射和直接 URL 两种模式
     proxy_url = None
-    if proxy and proxy_pool and proxy in proxy_pool:
-        proxy_url = proxy_pool[proxy].get("url")
+    if proxy:
+        # 判断是否为完整的代理 URL（以协议开头）
+        if proxy.startswith(("http://", "https://", "socks5://")):
+            # 直接模式：使用传入的完整代理 URL
+            proxy_url = proxy
+        elif proxy_pool and proxy in proxy_pool:
+            # 映射模式：从代理池中查找
+            proxy_url = proxy_pool[proxy].get("url")
 
     # 构建代理配置
     proxies = None

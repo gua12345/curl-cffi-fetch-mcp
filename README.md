@@ -127,10 +127,36 @@ curl -X POST "http://localhost:8000/v1/fetch" \
 **请求参数**：
 - `url` (必填): 目标网页 URL
 - `impersonate` (可选): 浏览器指纹类型，默认 `chrome`
-- `proxy` (可选): 代理标识符
-- `headers` (可选): 自定义请求头
-- `cookies` (可选): 自定义 Cookies
+- `proxy` (可选): 代理配置，支持两种模式：
+  - **代理标识符**：如 `"hk"`, `"sg"` - 从代理池中查找（需先在 `.env` 中配置 `PROXY_POOL`）
+  - **完整代理 URL**：如 `"http://proxy.example.com:8080"`, `"socks5://user:pass@proxy:1080"` - 直接使用该代理
+- `headers` (可选): 自定义请求头（JSON 对象）
+  - **注意**：基础 headers（User-Agent、Accept 等）会由浏览器指纹自动生成，通常无需手动设置
+  - 仅在需要添加特殊 headers（如 Authorization、Referer 等）时使用
+- `cookies` (可选): 自定义 Cookies（JSON 对象）
+  - **格式**：`{"cookie_name": "cookie_value"}`
+  - **用途**：用于需要登录态或特定会话的场景
 - `timeout` (可选): 超时时间（秒），默认 30
+
+**带 Cookies 和自定义 Headers 的请求示例**：
+```bash
+curl -X POST "http://localhost:8000/v1/fetch" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/user/profile",
+    "impersonate": "chrome136",
+    "headers": {
+      "Referer": "https://example.com/login",
+      "X-Custom-Header": "custom-value"
+    },
+    "cookies": {
+      "session_id": "abc123xyz",
+      "user_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    },
+    "timeout": 30
+  }'
+```
 
 **响应示例**：
 ```json
@@ -232,10 +258,37 @@ curl -X POST "http://localhost:8000/mcp" \
 **工具参数**：
 - `url` (必填): 目标网页 URL
 - `impersonate` (可选): 浏览器指纹类型，默认 `chrome`
-- `proxy` (可选): 代理标识符
-- `headers` (可选): 自定义请求头
-- `cookies` (可选): 自定义 Cookies
+- `proxy` (可选): 代理配置，支持两种模式：
+  - **代理标识符**：如 `"hk"`, `"sg"` - 从代理池中查找（需先在 `.env` 中配置 `PROXY_POOL`）
+  - **完整代理 URL**：如 `"http://proxy.example.com:8080"`, `"socks5://user:pass@proxy:1080"` - 直接使用该代理
+- `headers` (可选): 自定义请求头（JSON 对象）
+  - 基础 headers 由浏览器指纹自动生成，仅在需要特殊 headers 时使用
+- `cookies` (可选): 自定义 Cookies（JSON 对象，格式：`{"name": "value"}`）
+  - 用于需要登录态或特定会话的场景
 - `timeout` (可选): 超时时间（秒），默认 30
+
+**带 Cookies 的调用示例**：
+```bash
+curl -X POST "http://localhost:8000/mcp" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "fetch_url_tool",
+      "arguments": {
+        "url": "https://example.com/user/profile",
+        "impersonate": "chrome136",
+        "cookies": {
+          "session_id": "abc123xyz",
+          "user_token": "token_value_here"
+        },
+        "timeout": 30
+      }
+    }
+  }'
+```
 
 ## 缓存机制
 
@@ -389,7 +442,7 @@ CACHE_REDIS_URL=redis://localhost:6379/0
 | `API_KEY` | API 鉴权密钥（必填） | - |
 | `DEFAULT_IMPERSONATE` | 默认浏览器类型 | `chrome` |
 | `DEFAULT_TIMEOUT` | 默认超时时间（秒） | `30` |
-| `DEFAULT_PROXY` | 默认代理标识符 | - |
+| `DEFAULT_PROXY` | 默认代理配置（支持标识符或完整 URL） | - |
 | `PROXY_POOL` | 代理池配置（JSON） | `{}` |
 | `HTML2TEXT_BODY_WIDTH` | Markdown 文本宽度 | `0` |
 | `HTML2TEXT_IGNORE_LINKS` | 忽略链接 | `false` |
@@ -402,6 +455,10 @@ CACHE_REDIS_URL=redis://localhost:6379/0
 | `CACHE_CLEANUP_INTERVAL` | 后台清理间隔（秒） | `300` |
 
 ### 代理池配置
+
+服务支持两种代理使用方式：
+
+#### 方式 1: 代理池映射（推荐用于常用代理）
 
 在 `.env` 中配置代理池（JSON 格式），支持 HTTP、HTTPS 和 SOCKS5 代理。
 
@@ -423,6 +480,44 @@ PROXY_POOL={"socks_proxy": {"url": "socks5://username:password@proxy.example.com
 ```env
 PROXY_POOL={"hk": {"url": "http://hk-proxy:8080", "description": "香港代理"}, "sg": {"url": "http://user:pass@sg-proxy:8080", "description": "新加坡代理"}, "us": {"url": "socks5://us-proxy:1080", "description": "美国代理"}}
 ```
+
+**使用示例**：
+```bash
+# 使用代理标识符 "hk"
+curl -X POST "http://localhost:8000/v1/fetch" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "proxy": "hk"}'
+```
+
+#### 方式 2: 直接传入代理 URL（适用于临时或动态代理）
+
+无需在 `.env` 中配置，直接在请求中传入完整的代理 URL。
+
+**支持的代理协议**：
+- HTTP: `http://proxy.example.com:8080`
+- HTTPS: `https://proxy.example.com:8080`
+- SOCKS5: `socks5://proxy.example.com:1080`
+- 带鉴权: `http://user:pass@proxy.example.com:8080`
+
+**使用示例**：
+```bash
+# 直接使用 HTTP 代理
+curl -X POST "http://localhost:8000/v1/fetch" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "proxy": "http://proxy.example.com:8080"}'
+
+# 直接使用带鉴权的 SOCKS5 代理
+curl -X POST "http://localhost:8000/v1/fetch" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "proxy": "socks5://user:pass@proxy.example.com:1080"}'
+```
+
+**代理模式自动识别**：
+- 如果 `proxy` 参数以 `http://`, `https://`, `socks5://` 开头，则直接使用该 URL
+- 否则，从代理池中查找对应的标识符
 
 ### 浏览器指纹配置
 

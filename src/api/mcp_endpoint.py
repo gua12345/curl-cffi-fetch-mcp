@@ -60,10 +60,12 @@ async def fetch_url_tool(
     参数：
         url: 目标网页 URL
         impersonate: 浏览器类型（chrome/safari/edge），默认 chrome
-        proxy: 代理标识符（如 sg/cn/us），使用 list_proxies 工具查询可用代理
-        headers: 自定义请求头（可选）
-        cookies: 自定义 Cookies（可选）
-        timeout: 超时时间（秒），默认 30
+        proxy: 代理配置，支持两种模式：
+               1. 代理标识符（如 "hk", "sg"）- 从代理池中查找，使用 list_proxies 工具查询可用代理
+               2. 完整代理 URL（如 "http://proxy.example.com:8080", "socks5://user:pass@proxy:1080"）- 直接使用该代理
+        headers: 自定义请求头（可选）（JSON 对象）
+        cookies: 自定义 Cookies（可选）（JSON 对象，格式：`{"name": "value"}`）
+        timeout: 默认 30 秒
     返回：
         Markdown 格式的网页内容
     """
