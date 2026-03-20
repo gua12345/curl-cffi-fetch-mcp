@@ -1,8 +1,8 @@
 """配置管理模块
 
-三层配置优先级：
+配置优先级：
 1. 代码默认值
-2. .env 配置
+2. 环境变量
 3. 请求参数
 """
 
@@ -41,10 +41,22 @@ class Settings(BaseSettings):
     HTML2TEXT_IGNORE_LINKS: bool = False
     HTML2TEXT_IGNORE_IMAGES: bool = False
 
+    # 缓存配置（强制启用）
+    CACHE_REDIS_URL: str = ""  # Redis URL（配置后使用 Redis，否则使用内存缓存）
+
+    # 缓存行为配置
+    CACHE_TOKEN_THRESHOLD: int = 2000
+    CACHE_DEFAULT_CHUNK_SIZE: int = 2000
+
+    # 缓存清理配置
+    CACHE_DELETE_DELAY_SECONDS: int = 300  # 完全读取后延迟删除（5 分钟）
+    CACHE_TTL_SECONDS: int = 1800  # 未读完缓存的 TTL（30 分钟）
+    CACHE_CLEANUP_INTERVAL: int = 300  # 后台清理间隔（5 分钟）
+
     @field_validator("PROXY_POOL", mode="before")
     @classmethod
     def parse_proxy_pool(cls, v: Any) -> Dict[str, Dict[str, str]]:
-        """解析 .env 中的 JSON 字符串为 dict"""
+        """解析环境变量中的 JSON 字符串为 dict"""
         if v is None:
             return {}
         if isinstance(v, str):
@@ -54,9 +66,11 @@ class Settings(BaseSettings):
                 return {}
         return v if isinstance(v, dict) else {}
 
-    class Config:
-        env_file = str(PROJECT_ROOT / ".env")
-        env_file_encoding = "utf-8"
+    model_config = {
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,  # 环境变量名大小写敏感
+        "extra": "ignore"  # 忽略额外的环境变量
+    }
 
 
 # 全局配置实例
