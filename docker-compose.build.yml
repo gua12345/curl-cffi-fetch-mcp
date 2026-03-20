@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # 主应用服务（使用预构建镜像）
+  # 主应用服务
   app:
-    image: ghcr.io/gua12345/curl-cffi-fetch-mcp:latest
+    build: .
     container_name: curl-cffi-fetch-mcp
     ports:
       - "${PORT:-8000}:8000"
@@ -70,4 +70,3 @@ volumes:
 networks:
   curl-cffi-fetch-mcp-network:
     driver: bridge
-
